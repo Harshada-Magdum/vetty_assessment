@@ -10,3 +10,5 @@ def require_api_key(func):
             return func(*args, **kwargs)
         abort(401, description="Unauthorized: Missing or invalid API key")
     return decorated
+
+

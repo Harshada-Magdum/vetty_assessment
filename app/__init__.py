@@ -10,3 +10,4 @@ def create_app():
     Swagger(app, template=swagger_template)
 
     return app
+

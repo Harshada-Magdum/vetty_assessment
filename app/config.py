@@ -24,3 +24,5 @@ swagger_template = {
     },
     "security": [{"ApiKeyAuth": []}]
 }
+
+

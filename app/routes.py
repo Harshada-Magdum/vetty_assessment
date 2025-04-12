@@ -1,142 +1,75 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 from flasgger import swag_from
-from .auth import require_api_key
-from .coin_service import fetch_data_from_api
+from .service import fetch_data_from_api
 from .utils import paginate_list
 from .config import COINGECKO_API
 
-bp = Blueprint("main", __name__)
+routes_bp = Blueprint('routes', __name__)
 
-@bp.route("/coins/all", methods=["GET"])
-@require_api_key
+@routes_bp.route("/coins/all", methods=["GET"])
+@jwt_required()
 @swag_from({
-    'tags': ['Coins'],
-    'summary': 'List all coins',
-    'description': 'Returns a list of all coins from the CoinGecko API, paginated',
+    'tags': ['1_Coins'],
     'parameters': [
-        {
-            'name': 'page_num',
-            'in': 'query',
-            'type': 'integer',
-            'description': 'Page number for pagination',
-            'required': False,
-            'default': 1
-        },
-        {
-            'name': 'per_page',
-            'in': 'query',
-            'type': 'integer',
-            'description': 'Number of items per page',
-            'required': False,
-            'default': 10
-        }
+        {'name': 'page_num', 'in': 'query', 'type': 'integer', 'default': 1},
+        {'name': 'per_page', 'in': 'query', 'type': 'integer', 'default': 10}
     ],
-    'responses': {
-        200: {
-            'description': 'A paginated list of coins',
-            'schema': {
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        'id': {'type': 'string'},
-                        'symbol': {'type': 'string'},
-                        'name': {'type': 'string'}
-                    }
-                }
-            }
-        }
-    }
+    'security': [{"Bearer": []}],
+    'responses': {200: {'description': 'Paginated list of coins'}}
 })
 def list_all_coins():
-    page_num = request.args.get('page_num', default=1, type=int)
-    per_page = request.args.get('per_page', default=10, type=int)
-    
-    data = fetch_data_from_api(f"{COINGECKO_API}/coins/list")
-    paginated_data = paginate_list(data, page_num, per_page)
-    
-    return jsonify(paginated_data)
+    url = f"{COINGECKO_API}/coins/list"
+    data = fetch_data_from_api(url)
+    if isinstance(data, tuple): return jsonify(data[0]), data[1]
+    page_num = int(request.args.get("page_num", 1))
+    per_page = int(request.args.get("per_page", 10))
+    return jsonify({
+        "total_coins": len(data),
+        "page_num": page_num,
+        "per_page": per_page,
+        "coins": paginate_list(data, page_num, per_page)
+    })
 
-@bp.route("/categories", methods=["GET"])
-@require_api_key
+@routes_bp.route("/categories", methods=["GET"])
+@jwt_required()
 @swag_from({
-    'tags': ['Coins'],
-    'summary': 'List all categories',
-    'description': 'Returns all coin categories from the CoinGecko API, paginated',
+    'tags': ['2_Categories'],
     'parameters': [
-        {
-            'name': 'page_num',
-            'in': 'query',
-            'type': 'integer',
-            'description': 'Page number for pagination',
-            'required': False,
-            'default': 1
-        },
-        {
-            'name': 'per_page',
-            'in': 'query',
-            'type': 'integer',
-            'description': 'Number of items per page',
-            'required': False,
-            'default': 10
-        }
+        {'name': 'page_num', 'in': 'query', 'type': 'integer', 'default': 1},
+        {'name': 'per_page', 'in': 'query', 'type': 'integer', 'default': 10}
     ],
-    'responses': {
-        200: {
-            'description': 'Paginated list of categories',
-            'schema': {
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        'category_id': {'type': 'string'},
-                        'name': {'type': 'string'}
-                    }
-                }
-            }
-        }
-    }
+    'security': [{"Bearer": []}],
+    'responses': {200: {'description': 'Paginated list of categories'}}
 })
 def list_categories():
+    url = f"{COINGECKO_API}/coins/categories/list"
+    data = fetch_data_from_api(url)
+    if isinstance(data, tuple): return jsonify(data[0]), data[1]
+    page_num = int(request.args.get("page_num", 1))
+    per_page = int(request.args.get("per_page", 10))
+    return jsonify({
+        "total_categories": len(data),
+        "page_num": page_num,
+        "per_page": per_page,
+        "categories": paginate_list(data, page_num, per_page)
+    })
 
-    page_num = request.args.get('page_num', default=1, type=int)
-    per_page = request.args.get('per_page', default=10, type=int)
-    data = fetch_data_from_api(f"{COINGECKO_API}/coins/categories/list")
-    paginated_data = paginate_list(data, page_num, per_page)
-    return jsonify(paginated_data)
-    
-    
-
-@bp.route("/coin/<coin_id>", methods=["GET"])
-@require_api_key
+@routes_bp.route("/coin/<coin_id>", methods=["GET"])
+@jwt_required()
 @swag_from({
-    'tags': ['Coins'],
-    'summary': 'Get coin data by ID',
-    'description': 'Returns market data for a specific coin',
+    'tags': ['3_Coin Details'],
     'parameters': [
-        {
-            'name': 'coin_id',
-            'in': 'path',
-            'type': 'string',
-            'required': True,
-            'description': 'The CoinGecko ID of the coin(e.g., bitcoin, ethereum)'
-        }
+        {'name': 'coin_id', 'in': 'path', 'type': 'string', 'required': True}
     ],
+    'security': [{"Bearer": []}],
     'responses': {
-        200: {
-            'description': 'Market data for a coin',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'id': {'type': 'string'},
-                    'symbol': {'type': 'string'},
-                    'name': {'type': 'string'},
-                    'market_data': {'type': 'object'}
-                }
-            }
-        }
+        200: {'description': 'Detailed coin data'},
+        404: {'description': 'Coin not found'}
     }
 })
 def get_coin_data(coin_id):
-    data = fetch_data_from_api(f"{COINGECKO_API}/coins/{coin_id}")
+    url = f"{COINGECKO_API}/coins/{coin_id}"
+    data = fetch_data_from_api(url)
+    if isinstance(data, tuple): return jsonify(data[0]), data[1]
     return jsonify(data)

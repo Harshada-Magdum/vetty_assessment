@@ -2,3 +2,5 @@ Flask
 flasgger
 pytest
 requests_mock
+Flask-JWT-Extended
+pytest-mock
